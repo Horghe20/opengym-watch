@@ -1,0 +1,168 @@
+import Foundation
+import HealthKit
+import Combine
+
+class WorkoutManager: NSObject, ObservableObject {
+    static let shared = WorkoutManager()
+    
+    let healthStore = HKHealthStore()
+    var session: HKWorkoutSession?
+    var builder: HKLiveWorkoutBuilder?
+    
+    // Published values for UI
+    @Published var activeRoutine: Routine?
+    @Published var currentExerciseIndex: Int = 0
+    @Published var currentSetIndex: Int = 0
+    
+    @Published var isRunning = false
+    @Published var heartRate: Double = 0
+    @Published var activeEnergy: Double = 0
+    @Published var elapsedTime: TimeInterval = 0
+    
+    private var timer: Timer?
+    
+    func requestAuthorization() {
+        let typesToShare: Set = [
+            HKQuantityType.workoutType()
+        ]
+        let typesToRead: Set = [
+            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
+        ]
+        
+        healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { (success, error) in
+            // Handle error or success
+        }
+    }
+    
+    func startWorkout(routine: Routine) {
+        self.activeRoutine = routine
+        self.currentExerciseIndex = 0
+        self.currentSetIndex = 0
+        
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .traditionalStrengthTraining
+        configuration.locationType = .indoor
+        
+        do {
+            session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
+            builder = session?.associatedWorkoutBuilder()
+        } catch {
+            return
+        }
+        
+        session?.delegate = self
+        builder?.delegate = self
+        
+        builder?.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
+        
+        let startDate = Date()
+        session?.startActivity(with: startDate)
+        builder?.beginCollection(withStart: startDate) { (success, error) in
+            // Started
+        }
+        
+        DispatchQueue.main.async {
+            self.isRunning = true
+        }
+        startTimer()
+    }
+    
+    func pauseWorkout() {
+        session?.pause()
+        stopTimer()
+        DispatchQueue.main.async { self.isRunning = false }
+    }
+    
+    func resumeWorkout() {
+        session?.resume()
+        startTimer()
+        DispatchQueue.main.async { self.isRunning = true }
+    }
+    
+    func endWorkout() {
+        session?.end()
+        builder?.endCollection(withEnd: Date()) { (success, error) in
+            self.builder?.finishWorkout { (workout, error) in
+                // Workout saved
+            }
+        }
+        stopTimer()
+        DispatchQueue.main.async {
+            self.activeRoutine = nil
+            self.isRunning = false
+            self.elapsedTime = 0
+            self.heartRate = 0
+            self.activeEnergy = 0
+        }
+    }
+    
+    // MARK: - App Logic
+    func completeCurrentSet(weight: Double, reps: Int) {
+        guard var routine = activeRoutine else { return }
+        
+        // Update the set
+        routine.exercises[currentExerciseIndex].sets[currentSetIndex].weight = weight
+        routine.exercises[currentExerciseIndex].sets[currentSetIndex].reps = reps
+        routine.exercises[currentExerciseIndex].sets[currentSetIndex].isCompleted = true
+        self.activeRoutine = routine // trigger UI update
+        
+        // Advance to next set or exercise
+        let currentExercise = routine.exercises[currentExerciseIndex]
+        if currentSetIndex < currentExercise.sets.count - 1 {
+            currentSetIndex += 1
+        } else {
+            // Next exercise
+            if currentExerciseIndex < routine.exercises.count - 1 {
+                currentExerciseIndex += 1
+                currentSetIndex = 0
+            } else {
+                // Workout completed!
+                // We could automatically end it or let the user review it
+            }
+        }
+    }
+    
+    // MARK: - Timer
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.elapsedTime += 1
+        }
+    }
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+}
+
+// MARK: - HK Delegates
+extension WorkoutManager: HKWorkoutSessionDelegate {
+    func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {}
+    func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {}
+}
+
+extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
+    func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {}
+    
+    func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
+        for type in collectedTypes {
+            guard let quantityType = type as? HKQuantityType else { continue }
+            
+            let statistics = workoutBuilder.statistics(for: quantityType)
+            
+            DispatchQueue.main.async {
+                switch quantityType {
+                case HKQuantityType.quantityType(forIdentifier: .heartRate):
+                    let heartRateUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+                    self.heartRate = statistics?.mostRecentQuantity()?.doubleValue(for: heartRateUnit) ?? 0
+                case HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned):
+                    let energyUnit = HKUnit.kilocalorie()
+                    self.activeEnergy = statistics?.sumQuantity()?.doubleValue(for: energyUnit) ?? 0
+                default:
+                    break
+                }
+            }
+        }
+    }
+}
