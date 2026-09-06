@@ -2,31 +2,45 @@ import SwiftUI
 import WatchKit
 
 // MARK: - Home View
-struct HomeView: View {
+struct HomeView : View {
     @StateObject private var workoutManager = WorkoutManager.shared
-    
-    // In a real app, this would be fetched from iOS via WatchSyncManager
-    let routines = Routine.dummyRoutines
+    @StateObject private var syncManager = WatchSyncManager.shared
     
     var body: some View {
         NavigationView {
-            List(routines) { routine in
-                Button(action: {
-                    workoutManager.startWorkout(routine: routine)
-                }) {
-                    VStack(alignment: .leading) {
-                        Text(routine.title)
-                            .font(.headline)
-                        if let notes = routine.notes {
-                            Text(notes)
-                                .font(.footnote)
-                                .foregroundColor(.gray)
-                        }
+            if syncManager.routines.isEmpty {
+                VStack {
+                    Text("Nessuna routine")
+                        .font(.headline)
+                    Text("In attesa del telefono...")
+                        .font(.footnote)
+                        .foregroundColor(.gray)
+                    
+                    Button("Sincronizza Ora") {
+                        syncManager.requestSync()
                     }
-                    .padding(.vertical, 4)
+                    .padding(.top, 4)
                 }
+                .navigationTitle("Routines")
+            } else {
+                List(syncManager.routines) { routine in
+                    Button(action: {
+                        workoutManager.startWorkout(routine: routine)
+                    }) {
+                        VStack(alignment: .leading) {
+                            Text(routine.title)
+                                .font(.headline)
+                            if let notes = routine.notes {
+                                Text(notes)
+                                    .font(.footnote)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .navigationTitle("Routines")
             }
-            .navigationTitle("Routines")
         }
         .fullScreenCover(isPresented: $workoutManager.isRunning) {
             WorkoutTabView()
@@ -155,13 +169,13 @@ struct ActiveExerciseView: View {
                 .cornerRadius(12)
             }
             .onAppear {
-                currentWeight = set.weight
-                currentReps = Double(set.reps)
+                currentWeight = set.weight ?? 0.0
+                currentReps = Double(set.reps ?? 0)
             }
             .onChange(of: workoutManager.currentSetIndex) { _ in
                 let newSet = routine.exercises[workoutManager.currentExerciseIndex].sets[workoutManager.currentSetIndex]
-                currentWeight = newSet.weight
-                currentReps = Double(newSet.reps)
+                currentWeight = newSet.weight ?? 0.0
+                currentReps = Double(newSet.reps ?? 0)
             }
             .sheet(isPresented: $showRestTimer) {
                 RestTimerView(isPresented: $showRestTimer)

@@ -5,7 +5,7 @@ import Combine
 class WorkoutManager: NSObject, ObservableObject {
     static let shared = WorkoutManager()
     
-    let healthStore = HKHealthStore()
+    lazy var healthStore = HKHealthStore()
     var session: HKWorkoutSession?
     var builder: HKLiveWorkoutBuilder?
     
@@ -165,4 +165,82 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
             }
         }
     }
+}
+import Foundation
+
+// MARK: - App Models
+struct Routine: Identifiable, Codable {
+    let id: String
+    let title: String
+    let notes: String?
+    var exercises: [Exercise]
+    
+    // Mapping from JS
+    enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case title = "name"
+        case notes = "note"
+        case exercises = "ex"
+    }
+}
+
+struct Exercise: Identifiable, Codable {
+    let id: String
+    let name: String
+    var sets: [WorkoutSet]
+    
+    // JS sends mode or we can infer it
+    var isTimeBased: Bool?
+    var restTimer: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case sets = "sets"
+        case isTimeBased = "isTimeBased"
+        case restTimer = "restTimer"
+    }
+}
+
+struct WorkoutSet: Identifiable, Codable {
+    let id: String
+    var reps: Int?
+    var weight: Double?
+    var seconds: Int?
+    var isCompleted: Bool
+    
+    init(id: String = UUID().uuidString, reps: Int? = nil, weight: Double? = nil, seconds: Int? = nil, isCompleted: Bool = false) {
+        self.id = id
+        self.reps = reps
+        self.weight = weight
+        self.seconds = seconds
+        self.isCompleted = isCompleted
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, reps, weight, seconds, isCompleted
+    }
+}
+
+// MARK: - Dummy Data for Testing
+extension Routine {
+    static let dummyRoutines = [
+        Routine(id: "1", title: "Push Day", notes: "Chest, Shoulders, Triceps", exercises: [
+            Exercise(id: "e1", name: "Bench Press", sets: [
+                WorkoutSet(reps: 8, weight: 80.0),
+                WorkoutSet(reps: 8, weight: 80.0),
+                WorkoutSet(reps: 8, weight: 82.5)
+            ]),
+            Exercise(id: "e2", name: "Overhead Press", sets: [
+                WorkoutSet(reps: 10, weight: 50.0),
+                WorkoutSet(reps: 10, weight: 50.0)
+            ])
+        ]),
+        Routine(id: "2", title: "Pull Day", notes: "Back and Biceps", exercises: [
+            Exercise(id: "e3", name: "Pull Ups", sets: [
+                WorkoutSet(reps: 10, weight: 0),
+                WorkoutSet(reps: 10, weight: 0)
+            ])
+        ])
+    ]
 }

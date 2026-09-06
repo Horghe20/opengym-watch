@@ -6,6 +6,7 @@ import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { guestAllowed } from '../lib/guest.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder, writeAutoBackup } from '../lib/mobile.js'
 import { loadRemote, chooseLocal, forgetRemote, connect } from '../lib/remote.js'
+import { WearableService } from '../lib/wearable.js'
 
 const KEY = 'gym_state_v1'
 export const DEF = {
@@ -54,7 +55,10 @@ export const useStore = create((set, get) => {
     registerCustom(S.customEx)
     localStorage.setItem(KEY, JSON.stringify(S))
     set({ S })
-    if (MOBILE) nativePersist()
+    if (MOBILE) {
+      nativePersist()
+      WearableService.sendRoutines(S.routines)
+    }
     if (push && get().user) {
       clearTimeout(pushTm)
       pushTm = setTimeout(() => get().pushState(), 1500)
@@ -217,6 +221,7 @@ export const useStore = create((set, get) => {
             else get().setUser(remote.user)   // offline — keep going from the last-synced local copy
           }
           syncReminder(get().S)
+          WearableService.sendRoutines(get().S.routines)
           set({ ready: true })
           return
         }
@@ -229,6 +234,7 @@ export const useStore = create((set, get) => {
         }
         get().setGuest(true)
         syncReminder(get().S)
+        WearableService.sendRoutines(get().S.routines)
         // Only a genuinely first launch — nothing chosen yet and nothing to lose either — offers
         // the choice. Picking local (even with no data yet) persists that choice below and this
         // never asks again.
