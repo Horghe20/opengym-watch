@@ -22,6 +22,11 @@ class WorkoutManager: NSObject, ObservableObject {
     private var timer: Timer?
     
     func requestAuthorization() {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            print("[WorkoutManager] HealthKit non disponibile su questo device")
+            return
+        }
+
         let typesToShare: Set = [
             HKQuantityType.workoutType()
         ]
@@ -30,9 +35,13 @@ class WorkoutManager: NSObject, ObservableObject {
             HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
             HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
         ]
-        
+
         healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { (success, error) in
-            // Handle error or success
+            if let error = error {
+                print("[WorkoutManager] Autorizzazione HealthKit fallita: \(error.localizedDescription)")
+            } else {
+                print("[WorkoutManager] Autorizzazione HealthKit: \(success ? "concessa" : "negata dall'utente")")
+            }
         }
     }
     
@@ -49,18 +58,21 @@ class WorkoutManager: NSObject, ObservableObject {
             session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
             builder = session?.associatedWorkoutBuilder()
         } catch {
+            print("[WorkoutManager] Impossibile creare la sessione HealthKit: \(error.localizedDescription)")
             return
         }
-        
+
         session?.delegate = self
         builder?.delegate = self
-        
+
         builder?.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
-        
+
         let startDate = Date()
         session?.startActivity(with: startDate)
         builder?.beginCollection(withStart: startDate) { (success, error) in
-            // Started
+            if let error = error {
+                print("[WorkoutManager] beginCollection fallita: \(error.localizedDescription)")
+            }
         }
         
         DispatchQueue.main.async {
@@ -84,8 +96,16 @@ class WorkoutManager: NSObject, ObservableObject {
     func endWorkout() {
         session?.end()
         builder?.endCollection(withEnd: Date()) { (success, error) in
+            if let error = error {
+                print("[WorkoutManager] endCollection fallita: \(error.localizedDescription)")
+                return
+            }
             self.builder?.finishWorkout { (workout, error) in
-                // Workout saved
+                if let error = error {
+                    print("[WorkoutManager] finishWorkout fallita: \(error.localizedDescription)")
+                } else if workout == nil {
+                    print("[WorkoutManager] finishWorkout non ha prodotto un workout da salvare")
+                }
             }
         }
         stopTimer()
@@ -139,7 +159,9 @@ class WorkoutManager: NSObject, ObservableObject {
 // MARK: - HK Delegates
 extension WorkoutManager: HKWorkoutSessionDelegate {
     func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {}
-    func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {}
+    func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
+        print("[WorkoutManager] Sessione HealthKit fallita: \(error.localizedDescription)")
+    }
 }
 
 extension WorkoutManager: HKLiveWorkoutBuilderDelegate {

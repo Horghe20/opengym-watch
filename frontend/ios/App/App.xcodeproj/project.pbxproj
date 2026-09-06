@@ -16,6 +16,8 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A151D1DD304449990048BC35 /* OpenGymWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A151D1D3304449980048BC35 /* OpenGymWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AF5079AA3076CE2BDB84B240 /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 773667774367EC22FBA1341E /* Pods_App.framework */; };
+		AA11BB22CC33DD44EE55FF67 /* WatchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* WatchPlugin.swift */; };
+		AA11BB22CC33DD44EE55FF69 /* WatchPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF68 /* WatchPlugin.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +58,9 @@
 		658787CCE2DA9F6C5B4A0ABB /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
 		773667774367EC22FBA1341E /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A151D1D3304449980048BC35 /* OpenGymWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenGymWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA11BB22CC33DD44EE55FF66 /* WatchPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlugin.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF68 /* WatchPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchPlugin.m; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF70 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -120,6 +125,9 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				AA11BB22CC33DD44EE55FF66 /* WatchPlugin.swift */,
+				AA11BB22CC33DD44EE55FF68 /* WatchPlugin.m */,
+				AA11BB22CC33DD44EE55FF70 /* App.entitlements */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -286,6 +294,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				AA11BB22CC33DD44EE55FF67 /* WatchPlugin.swift in Sources */,
+				AA11BB22CC33DD44EE55FF69 /* WatchPlugin.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -439,6 +449,7 @@
 			baseConfigurationReference = 658787CCE2DA9F6C5B4A0ABB /* Pods-App.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 62A37RQF98;
@@ -464,6 +475,7 @@
 			baseConfigurationReference = 35F9138E1831EBED482AD59A /* Pods-App.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 62A37RQF98;

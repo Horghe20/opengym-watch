@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct OpenGym_Watch_App_Watch_AppApp: App {
+    init() {
+        WorkoutManager.shared.requestAuthorization()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

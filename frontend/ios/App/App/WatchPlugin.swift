@@ -1,9 +1,12 @@
 import Foundation
 import Capacitor
 import WatchConnectivity
+import HealthKit
 
 @objc(WatchPlugin)
 public class WatchPlugin: CAPPlugin, WCSessionDelegate {
+
+    private let healthStore = HKHealthStore()
 
     // FIX #2: mantieni l'array nativo invece di Data wrappata
     // FIX #2: mantieni l'array nativo ma salvalo in UserDefaults come JSON Data (per supportare i null provenienti da JS)
@@ -58,12 +61,43 @@ public class WatchPlugin: CAPPlugin, WCSessionDelegate {
     }
 
     @objc func saveWorkoutToHealthKit(_ call: CAPPluginCall) {
-        guard call.getDouble("start") != nil,
-              call.getDouble("end") != nil else {
+        guard let startMillis = call.getDouble("start"),
+              let endMillis = call.getDouble("end") else {
             call.reject("Must provide start and end timestamps")
             return
         }
-        call.resolve(["success": true])
+        let name = call.getString("name") ?? "Workout"
+
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.reject("HealthKit is not available on this device")
+            return
+        }
+
+        let workoutType = HKQuantityType.workoutType()
+        healthStore.requestAuthorization(toShare: [workoutType], read: []) { [weak self] success, error in
+            guard let self = self else { return }
+            guard success else {
+                call.reject("HealthKit authorization denied", nil, error)
+                return
+            }
+
+            let startDate = Date(timeIntervalSince1970: startMillis / 1000)
+            let endDate = Date(timeIntervalSince1970: endMillis / 1000)
+            let workout = HKWorkout(
+                activityType: .traditionalStrengthTraining,
+                start: startDate,
+                end: endDate,
+                metadata: [HKMetadataKeyWorkoutBrandName: name]
+            )
+
+            self.healthStore.save(workout) { saved, saveError in
+                if saved {
+                    call.resolve(["success": true])
+                } else {
+                    call.reject("Failed to save workout to HealthKit", nil, saveError)
+                }
+            }
+        }
     }
 
     // MARK: - WCSessionDelegate
